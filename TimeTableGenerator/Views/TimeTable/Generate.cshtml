@@ -1,0 +1,45 @@
+﻿@model TimeTableGenerator.Models.GenerateModel
+
+@{
+    ViewData["Title"] = "Generate Time Table";
+}
+
+<h2>Generate Time Table</h2>
+
+<form asp-action="Generate" method="post">
+    <div class="form-group">
+        <label for="TotalHours">Total Hours for the Week:</label>
+        <input type="number" asp-for="TotalHours" class="form-control" required min="1" />
+        <span asp-validation-for="TotalHours" class="text-danger"></span>
+    </div>
+
+    <div class="form-group">
+        <label>Subjects:</label>
+        <div id="subjects-container">
+            <div class="input-group mb-2">
+                <input type="text" name="Subjects" class="form-control" placeholder="Enter Subject Name" required />
+                <button type="button" class="btn btn-success add-subject">+</button>
+            </div>
+        </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Next</button>
+</form>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    $(document).ready(function() {
+        $(".add-subject").click(function() {
+            $("#subjects-container").append(`
+                <div class="input-group mb-2">
+                    <input type="text" name="Subjects" class="form-control" placeholder="Enter Subject Name" required />
+                    <button type="button" class="btn btn-danger remove-subject">-</button>
+                </div>
+            `);
+        });
+
+        $(document).on("click", ".remove-subject", function() {
+            $(this).parent().remove();
+        });
+    });
+</script>

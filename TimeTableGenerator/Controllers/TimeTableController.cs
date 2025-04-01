@@ -5,58 +5,74 @@ namespace TimeTableGenerator.Controllers
 {
     public class TimeTableController : Controller
     {
-        public IActionResult Index()
+        [HttpGet]
+        public IActionResult Generate()
         {
-            return View(new TimeTableModel());
+            return View();
         }
 
         [HttpPost]
-        public IActionResult EnterSubjectHours(TimeTableModel model)
+        public IActionResult Generate(TimeTableInputModel model)
         {
             if (!ModelState.IsValid)
             {
-                return View("Index", model);
-            }
-            var subjectHours = new List<SubjectHoursModel>();
-            for (int i = 0; i < model.TotalSubjects; i++)
-            {
-                subjectHours.Add(new SubjectHoursModel { Subject = $"Subject {i + 1}", Hours = 0 });
+                return View(model);
             }
 
-            ViewBag.TotalPeriods = model.TotalPeriods;
-            return View(subjectHours);
+            // Store data in TempData to use in the next view
+            TempData["WorkingDays"] = model.WorkingDays;
+            TempData["SubjectsPerDay"] = model.SubjectsPerDay;
+            TempData["TotalSubjects"] = model.TotalSubjects;
+            TempData["TotalHours"] = model.TotalHours;
+
+            return RedirectToAction("AllocateHours");
+        }
+
+        [HttpGet]
+        public IActionResult AllocateHours()
+        {
+            if (TempData["TotalSubjects"] == null || TempData["TotalHours"] == null)
+            {
+                return RedirectToAction("Generate");
+            }
+
+            int totalSubjects = (int)TempData["TotalSubjects"];
+            int totalHours = (int)TempData["TotalHours"];
+
+            var model = new AllocateHoursModel
+            {
+                TotalSubjects = totalSubjects,
+                TotalHours = totalHours,
+                SubjectHours = new List<SubjectHoursEntry>()
+            };
+
+            // Sample subjects (replace with user input if needed)
+            string[] subjects = { "Gujarati", "English", "Science", "Maths" };
+
+            // Evenly distribute hours among subjects
+            int baseHours = totalHours / subjects.Length;
+            int remainder = totalHours % subjects.Length;
+
+            for (int i = 0; i < subjects.Length; i++)
+            {
+                int allocatedHours = baseHours + (i < remainder ? 1 : 0); // Distribute remainder hours
+                model.SubjectHours.Add(new SubjectHoursEntry { SubjectName = subjects[i], Hours = allocatedHours });
+            }
+
+            return View(model);
         }
 
         [HttpPost]
-        public IActionResult GenerateTimeTable(List<SubjectHoursModel> subjectHours, int totalPeriods)
+        public IActionResult AllocateHours(AllocateHoursModel model)
         {
-            if (subjectHours.Sum(s => s.Hours) != totalPeriods)
+            if (model.SubjectHours.Sum(s => s.Hours) != model.TotalHours)
             {
-                ViewBag.Error = "Total hours must match calculated hours!";
-                return View("EnterSubjectHours", subjectHours);
-            }
-            var timetable = new List<List<string>>();
-            int workingDays = (int)Math.Ceiling((double)totalPeriods / subjectHours.Count);
-            int subjectsPerDay = subjectHours.Count;
-
-            var allSubjects = subjectHours.SelectMany(s => Enumerable.Repeat(s.Subject, s.Hours)).ToList();
-            var rnd = new Random();
-            allSubjects = allSubjects.OrderBy(x => rnd.Next()).ToList();
-
-            for (int i = 0; i < subjectsPerDay; i++)
-            {
-                timetable.Add(new List<string>());
-                for (int j = 0; j < workingDays; j++)
-                {
-                    timetable[i].Add(allSubjects.First());
-                    allSubjects.RemoveAt(0);
-                }
+                ModelState.AddModelError("", "Total hours must match the weekly total.");
+                return View(model);
             }
 
-            ViewBag.TimeTable = timetable;
-            return View("GeneratedTimeTable");
-
-
+            TempData["FinalSubjects"] = Newtonsoft.Json.JsonConvert.SerializeObject(model.SubjectHours);
+            return RedirectToAction("GenerateTimeTable");
         }
     }
 }

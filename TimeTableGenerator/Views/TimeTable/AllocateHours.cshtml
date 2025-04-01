@@ -1,0 +1,60 @@
+﻿@model TimeTableGenerator.Models.AllocateHoursModel
+
+@{
+    ViewData["Title"] = "Allocate Subject Hours";
+}
+
+<h2>Allocate Subject Hours</h2>
+<p>Total Hours for the Week: <strong>@Model.TotalHours</strong></p>
+
+<form asp-action="AllocateHours" method="post">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Subject</th>
+                <th>Hours</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.SubjectHours != null)
+            {
+                @for (int i = 0; i < Model.SubjectHours.Count; i++)
+                {
+                    <tr>
+                        <td>
+                            <input type="hidden" asp-for="SubjectHours[i].SubjectName" />
+                            @Model.SubjectHours[i].SubjectName
+                        </td>
+                        <td>
+                            <input type="number" asp-for="SubjectHours[i].Hours" min="1" max="@Model.TotalHours" class="form-control" required />
+                            <span asp-validation-for="SubjectHours[i].Hours" class="text-danger"></span>
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+
+    <button type="submit" class="btn btn-primary">Next</button>
+</form>
+
+<script>
+    $(document).ready(function() {
+        function distributeHours() {
+            let totalHours = @Model.TotalHours;
+            let subjectInputs = $("input[name$='Hours']");
+            let subjectCount = subjectInputs.length;
+
+            let baseHours = Math.floor(totalHours / subjectCount);
+            let remainder = totalHours % subjectCount;
+
+            subjectInputs.each(function(index) {
+                let hours = baseHours + (index < remainder ? 1 : 0);
+                $(this).val(hours);
+            });
+        }
+
+        // Distribute hours on page load
+        distributeHours();
+    });
+</script>
